@@ -605,10 +605,63 @@ function initializeNavigation() {
                 e.preventDefault();
                 navItems.forEach(nav => nav.classList.remove('active'));
                 this.classList.add('active');
+
+                // Get the menu item text for future use
+                const menuText = this.textContent.trim();
+                console.log('Navigating to:', menuText);
+
+                // Handle navigation
+                showSection(menuText);
             }
         });
     });
 }
+
+function showSection(sectionName) {
+    const statsCards = document.querySelector('.stats-cards');
+    const contentGrid = document.querySelector('.content-grid');
+    const casesSection = document.getElementById('casesSection');
+    const communitySection = document.getElementById('communitySection');
+    const emergencyResourcesSection = document.getElementById('emergencyResourcesSection');
+    const alertsSection = document.getElementById('alertsSection');
+    const settingsSection = document.getElementById('settingsSection');
+
+    // Hide all sections
+    casesSection.style.display = 'none';
+    communitySection.style.display = 'none';
+    emergencyResourcesSection.style.display = 'none';
+    alertsSection.style.display = 'none';
+    settingsSection.style.display = 'none';
+
+    if (sectionName === 'Community') {
+        statsCards.style.display = 'none';
+        contentGrid.style.display = 'none';
+        communitySection.style.display = 'block';
+        initializeCommunity();
+    } else if (sectionName === 'Emergency Resources') {
+        statsCards.style.display = 'none';
+        contentGrid.style.display = 'none';
+        emergencyResourcesSection.style.display = 'block';
+        initializeEmergencyResources();
+    } else if (sectionName === 'Alerts') {
+        statsCards.style.display = 'none';
+        contentGrid.style.display = 'none';
+        alertsSection.style.display = 'block';
+        initializeAlerts();
+    } else if (sectionName === 'Settings') {
+        statsCards.style.display = 'none';
+        contentGrid.style.display = 'none';
+        settingsSection.style.display = 'block';
+        initializeSettings();
+    } else {
+        statsCards.style.display = 'grid';
+        contentGrid.style.display = 'grid';
+        casesSection.style.display = 'block';
+    }
+}
+
+// Community Features section moved to community.js
+// Emergency Resources section moved to emergency-resources.js
 
 // ========================================
 // Utility Functions

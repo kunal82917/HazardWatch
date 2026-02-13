@@ -70,7 +70,7 @@ function initializeMobileMenu() {
 function checkAuth() {
     const isLoggedIn = sessionStorage.getItem('isLoggedIn');
     if (!isLoggedIn) {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
         return;
     }
     
@@ -91,7 +91,7 @@ if (logoutBtn) {
         if (confirm('Are you sure you want to logout?')) {
             sessionStorage.removeItem('isLoggedIn');
             sessionStorage.removeItem('username');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
     });
 }

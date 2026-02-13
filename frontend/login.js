@@ -1,3 +1,17 @@
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app); 
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCFYKtb_fNUtLA3Yz0Ssx4PoBoKQIQxOM0",
+    authDomain: "disaster-ai-240b7.firebaseapp.com",
+    projectId: "disaster-ai-240b7",
+};
+
+console.log("Firebase initialized successfully");
+
 // ========================================
 // Login Page JavaScript
 // ========================================
@@ -64,14 +78,3 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCFYKtb_fNUtLA3Yz0Ssx4PoBoKQIQxOM0",
-    authDomain: "disaster-ai-240b7.firebaseapp.com",
-    projectId: "disaster-ai-240b7",
-};
-
-console.log("Firebase connected");

@@ -301,7 +301,7 @@ async function loadNews() {
     const API_URL = "https://gnews.io/api/v4/search?q=disaster OR flood OR cyclone OR earthquake&lang=en&country=in&max=6&token=fdfb9e5b394271a3b276d5b9c8d0f00e";
 
     try {
-        const response = await fetch(API_URL);
+        const response = await fetch("/api/news")
         const data = await response.json();
 
         data.articles.forEach((article, index) => {

@@ -1,14 +1,14 @@
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app); 
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCFYKtb_fNUtLA3Yz0Ssx4PoBoKQIQxOM0",
     authDomain: "disaster-ai-240b7.firebaseapp.com",
     projectId: "disaster-ai-240b7",
 };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 console.log("Firebase initialized successfully");
 
@@ -20,34 +20,43 @@ document.addEventListener('DOMContentLoaded', function () {
     const loginForm = document.getElementById('loginForm');
 
     // Handle login form submission
-    loginForm.addEventListener('submit', function (e) {
+    loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const username = document.getElementById('username').value;
+        const email = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         const remember = document.querySelector('input[name="remember"]').checked;
 
-        // Simple validation (in production, this would be server-side)
-        if (username && password) {
-            // Store user session (in production, use proper authentication)
-            sessionStorage.setItem('isLoggedIn', 'true');
-            sessionStorage.setItem('username', username);
-
-            if (remember) {
-                localStorage.setItem('rememberedUser', username);
-            }
-
+        // Simple validation
+        if (email && password) {
             // Add loading state to button
             const submitBtn = loginForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<span>Signing in...</span>';
             submitBtn.disabled = true;
 
-            // Simulate authentication delay
-            setTimeout(() => {
+            try {
+                // Firebase authentication
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+                // Store user session (kept for compatibility with other pages if they rely on it)
+                sessionStorage.setItem('isLoggedIn', 'true');
+                sessionStorage.setItem('username', email);
+
+                if (remember) {
+                    localStorage.setItem('rememberedUser', email);
+                }
+
                 // Redirect to dashboard
                 window.location.href = 'dashboard.html';
-            }, 800);
+            } catch (error) {
+                console.error("Authentication error:", error);
+                alert("Login failed: " + error.message);
+
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
         }
     });
 

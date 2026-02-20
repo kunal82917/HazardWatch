@@ -294,28 +294,71 @@ const newsData = [
     }
 ];
 
-function loadNews() {
+async function loadNews() {
     const newsList = document.getElementById('newsList');
     newsList.innerHTML = '';
 
-    newsData.forEach((news, index) => {
-        const newsItem = document.createElement('div');
-        newsItem.className = 'news-item';
-        newsItem.style.animationDelay = `${index * 0.1}s`;
-        newsItem.style.animation = 'fadeIn 0.4s ease-out both';
+    const API_URL = "https://gnews.io/api/v4/search?q=disaster OR flood OR cyclone OR earthquake&lang=en&country=in&max=6&token=fdfb9e5b394271a3b276d5b9c8d0f00e";
 
-        newsItem.innerHTML = `
-            <div class="news-badge badge-${news.badge}">${news.badge}</div>
-            <div class="news-title">${news.title}</div>
-            <div class="news-time">${news.time}</div>
-        `;
+    try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
 
-        newsItem.addEventListener('click', function () {
-            alert(`Full news details:\n\n${news.title}\n\nPublished: ${news.time}`);
+        data.articles.forEach((article, index) => {
+
+            const badge = getBadgeType(article.title);
+
+            const newsItem = document.createElement('div');
+            newsItem.className = 'news-item';
+            newsItem.style.animationDelay = `${index * 0.1}s`;
+            newsItem.style.animation = 'fadeIn 0.4s ease-out both';
+
+            newsItem.innerHTML = `
+                <div class="news-badge badge-${badge}">${badge}</div>
+                <div class="news-title">${article.title}</div>
+                <div class="news-time">${formatTime(article.publishedAt)}</div>
+            `;
+
+            newsItem.addEventListener('click', function () {
+                window.open(article.url, "_blank");
+            });
+
+            newsList.appendChild(newsItem);
         });
 
-        newsList.appendChild(newsItem);
-    });
+    } catch (error) {
+        newsList.innerHTML = "<p>Failed to load news.</p>";
+        console.error(error);
+    }
+}
+
+function getBadgeType(title) {
+    const text = title.toLowerCase();
+
+    if (text.includes("earthquake") || text.includes("cyclone") || text.includes("tsunami")) {
+        return "breaking";
+    }
+
+    if (text.includes("warning") || text.includes("alert")) {
+        return "alert";
+    }
+
+    return "update";
+}
+
+function formatTime(dateString) {
+    const published = new Date(dateString);
+    const now = new Date();
+
+    const diff = Math.floor((now - published) / 1000);
+
+    const minutes = Math.floor(diff / 60);
+    const hours = Math.floor(diff / 3600);
+
+    if (minutes < 60) return `${minutes} minutes ago`;
+    if (hours < 24) return `${hours} hours ago`;
+
+    return published.toLocaleDateString();
 }
 
 // Refresh news
@@ -326,6 +369,8 @@ document.getElementById('refreshNews').addEventListener('click', function () {
         loadNews();
     }, 400);
 });
+
+document.addEventListener("DOMContentLoaded", loadNews);
 
 // ========================================
 // Cases Table

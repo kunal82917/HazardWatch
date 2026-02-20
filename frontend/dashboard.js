@@ -2,10 +2,10 @@
 // Dashboard JavaScript
 // ========================================
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Check authentication
     checkAuth();
-    
+
     // Initialize components
     initializeMap();
     loadNews();
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeModals();
     initializeNavigation();
     initializeMobileMenu();
-    
+
     // Set up auto-refresh
     setInterval(updateLastUpdated, 60000); // Update every minute
 });
@@ -26,37 +26,37 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeMobileMenu() {
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
-    
+
     if (!menuToggle) return;
-    
-    menuToggle.addEventListener('click', function(e) {
+
+    menuToggle.addEventListener('click', function (e) {
         e.stopPropagation();
         sidebar.classList.toggle('active');
     });
-    
+
     // Close sidebar when clicking outside (mobile only)
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (window.innerWidth <= 1024) {
             if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
                 sidebar.classList.remove('active');
             }
         }
     });
-    
+
     // Close sidebar when a nav item is clicked
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
         if (item.id !== 'reportCaseBtn') {
-            item.addEventListener('click', function() {
+            item.addEventListener('click', function () {
                 if (window.innerWidth <= 1024) {
                     sidebar.classList.remove('active');
                 }
             });
         }
     });
-    
+
     // Handle window resize
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         if (window.innerWidth > 1024) {
             sidebar.classList.remove('active');
         }
@@ -73,7 +73,7 @@ function checkAuth() {
         window.location.href = 'index.html';
         return;
     }
-    
+
     // Update user display
     const username = sessionStorage.getItem('username');
     if (username) {
@@ -87,7 +87,7 @@ function checkAuth() {
 // Logout functionality
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
-    logoutBtn.addEventListener('click', function() {
+    logoutBtn.addEventListener('click', function () {
         if (confirm('Are you sure you want to logout?')) {
             sessionStorage.removeItem('isLoggedIn');
             sessionStorage.removeItem('username');
@@ -104,70 +104,93 @@ let map;
 let markers = [];
 
 function initializeMap() {
-    // Initialize Leaflet map
-    map = L.map('map').setView([40.7128, -74.0060], 11); // Default to New York
-    
-    // Add OpenStreetMap tiles
+
+    // Create map first (temporary center)
+    map = L.map('map').setView([19.0760, 72.8777], 12);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18
     }).addTo(map);
-    
+
+    // Try to get user's location
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                // Move map to user location
+                map.setView([userLat, userLng], 13);
+
+                // Add marker for user
+                L.marker([userLat, userLng])
+                    .addTo(map)
+                    .bindPopup("You are here")
+                    .openPopup();
+
+            },
+            function (error) {
+                console.log("Location access denied. Using default Mumbai.");
+            }
+        );
+    }
+
     // Add sample incident markers
     const incidents = [
         {
-            lat: 40.7589,
-            lng: -73.9851,
+            lat: 19.0596,
+            lng: 72.8295,
             severity: 'critical',
             type: 'Fire',
-            description: 'Building fire in Times Square area',
+            description: 'Building fire reported in Bandra area',
             caseId: 'DS-2024-001'
         },
         {
-            lat: 40.7614,
-            lng: -73.9776,
+            lat: 19.0176,
+            lng: 72.8562,
             severity: 'medium',
             type: 'Flood',
-            description: 'Street flooding near Central Park',
+            description: 'Street flooding in Dadar',
             caseId: 'DS-2024-002'
         },
         {
-            lat: 40.7306,
-            lng: -73.9352,
+            lat: 19.1197,
+            lng: 72.8464,
             severity: 'low',
             type: 'Accident',
-            description: 'Traffic accident in Queens',
+            description: 'Traffic accident near Andheri Metro',
             caseId: 'DS-2024-003'
         },
         {
-            lat: 40.6782,
-            lng: -73.9442,
+            lat: 18.9067,
+            lng: 72.8147,
             severity: 'critical',
             type: 'Storm',
-            description: 'Severe storm damage in Brooklyn',
+            description: 'Storm damage reported in Colaba',
             caseId: 'DS-2024-004'
         },
         {
-            lat: 40.7480,
-            lng: -73.9862,
+            lat: 19.1176,
+            lng: 72.9060,
             severity: 'medium',
             type: 'Landslide',
-            description: 'Minor landslide in Manhattan',
+            description: 'Minor landslide in Powai hills',
             caseId: 'DS-2024-005'
         }
     ];
-    
+
     incidents.forEach(incident => {
         addMarker(incident);
     });
-    
+
     // Map filter controls
     const filterBtns = document.querySelectorAll('.map-control-btn');
     filterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             filterBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            
+
             const filter = this.getAttribute('data-filter');
             filterMarkers(filter);
         });
@@ -176,7 +199,7 @@ function initializeMap() {
 
 function addMarker(incident) {
     const color = getMarkerColor(incident.severity);
-    
+
     const customIcon = L.divIcon({
         className: 'custom-marker',
         html: `<div style="
@@ -190,7 +213,7 @@ function addMarker(incident) {
         "></div>`,
         iconSize: [24, 24]
     });
-    
+
     const marker = L.marker([incident.lat, incident.lng], { icon: customIcon })
         .addTo(map)
         .bindPopup(`
@@ -210,13 +233,13 @@ function addMarker(incident) {
                 ">${incident.severity}</span>
             </div>
         `);
-    
+
     marker.incident = incident;
     markers.push(marker);
 }
 
 function getMarkerColor(severity) {
-    switch(severity) {
+    switch (severity) {
         case 'critical': return '#EF233C';
         case 'medium': return '#FFB703';
         case 'low': return '#06D6A0';
@@ -274,29 +297,29 @@ const newsData = [
 function loadNews() {
     const newsList = document.getElementById('newsList');
     newsList.innerHTML = '';
-    
+
     newsData.forEach((news, index) => {
         const newsItem = document.createElement('div');
         newsItem.className = 'news-item';
         newsItem.style.animationDelay = `${index * 0.1}s`;
         newsItem.style.animation = 'fadeIn 0.4s ease-out both';
-        
+
         newsItem.innerHTML = `
             <div class="news-badge badge-${news.badge}">${news.badge}</div>
             <div class="news-title">${news.title}</div>
             <div class="news-time">${news.time}</div>
         `;
-        
-        newsItem.addEventListener('click', function() {
+
+        newsItem.addEventListener('click', function () {
             alert(`Full news details:\n\n${news.title}\n\nPublished: ${news.time}`);
         });
-        
+
         newsList.appendChild(newsItem);
     });
 }
 
 // Refresh news
-document.getElementById('refreshNews').addEventListener('click', function() {
+document.getElementById('refreshNews').addEventListener('click', function () {
     this.style.transform = 'rotate(360deg)';
     setTimeout(() => {
         this.style.transform = 'rotate(0deg)';
@@ -377,23 +400,23 @@ const casesData = [
 
 function loadCases() {
     renderCases(casesData);
-    
+
     // Search functionality
-    document.getElementById('searchCases').addEventListener('input', function(e) {
+    document.getElementById('searchCases').addEventListener('input', function (e) {
         const searchTerm = e.target.value.toLowerCase();
-        const filtered = casesData.filter(c => 
+        const filtered = casesData.filter(c =>
             c.id.toLowerCase().includes(searchTerm) ||
             c.type.toLowerCase().includes(searchTerm) ||
             c.location.toLowerCase().includes(searchTerm)
         );
         renderCases(filtered);
     });
-    
+
     // Filter functionality
-    document.getElementById('filterStatus').addEventListener('change', function(e) {
+    document.getElementById('filterStatus').addEventListener('change', function (e) {
         const filterValue = e.target.value;
-        const filtered = filterValue === 'all' 
-            ? casesData 
+        const filtered = filterValue === 'all'
+            ? casesData
             : casesData.filter(c => c.severity === filterValue || c.status === filterValue);
         renderCases(filtered);
     });
@@ -402,7 +425,7 @@ function loadCases() {
 function renderCases(cases) {
     const tbody = document.getElementById('casesTableBody');
     tbody.innerHTML = '';
-    
+
     cases.forEach(caseItem => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -480,32 +503,32 @@ function initializeModals() {
     const closeModal = document.getElementById('closeModal');
     const cancelReport = document.getElementById('cancelReport');
     const reportForm = document.getElementById('reportForm');
-    
-    reportBtn.addEventListener('click', function(e) {
+
+    reportBtn.addEventListener('click', function (e) {
         e.preventDefault();
         reportModal.classList.add('active');
     });
-    
-    closeModal.addEventListener('click', function() {
+
+    closeModal.addEventListener('click', function () {
         reportModal.classList.remove('active');
         reportForm.reset();
     });
-    
-    cancelReport.addEventListener('click', function() {
+
+    cancelReport.addEventListener('click', function () {
         reportModal.classList.remove('active');
         reportForm.reset();
     });
-    
-    reportModal.addEventListener('click', function(e) {
+
+    reportModal.addEventListener('click', function (e) {
         if (e.target === reportModal) {
             reportModal.classList.remove('active');
             reportForm.reset();
         }
     });
-    
-    reportForm.addEventListener('submit', function(e) {
+
+    reportForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        
+
         const formData = {
             type: document.getElementById('caseType').value,
             severity: document.getElementById('caseSeverity').value,
@@ -514,10 +537,10 @@ function initializeModals() {
             contact: document.getElementById('caseContact').value,
             people: document.getElementById('casePeople').value
         };
-        
+
         // Generate new case ID
         const newId = `DS-2024-${String(casesData.length + 1).padStart(3, '0')}`;
-        
+
         // Add new case
         const newCase = {
             id: newId,
@@ -527,38 +550,38 @@ function initializeModals() {
             status: 'active',
             reported: 'Just now'
         };
-        
+
         casesData.unshift(newCase);
-        
+
         // Update stats
         updateStats();
-        
+
         // Reload cases table
         renderCases(casesData);
-        
+
         // Show success message
         alert(`Case ${newId} has been successfully reported!\n\nType: ${newCase.type}\nLocation: ${newCase.location}\nSeverity: ${newCase.severity}`);
-        
+
         // Close modal and reset form
         reportModal.classList.remove('active');
         reportForm.reset();
     });
-    
+
     // Profile Modal
     const profileModal = document.getElementById('profileModal');
     const profileBtn = document.getElementById('profileBtn');
     const closeProfileModal = document.getElementById('closeProfileModal');
-    
-    profileBtn.addEventListener('click', function(e) {
+
+    profileBtn.addEventListener('click', function (e) {
         e.preventDefault();
         profileModal.classList.add('active');
     });
-    
-    closeProfileModal.addEventListener('click', function() {
+
+    closeProfileModal.addEventListener('click', function () {
         profileModal.classList.remove('active');
     });
-    
-    profileModal.addEventListener('click', function(e) {
+
+    profileModal.addEventListener('click', function (e) {
         if (e.target === profileModal) {
             profileModal.classList.remove('active');
         }
@@ -573,7 +596,7 @@ function updateStats() {
     const activeCases = casesData.filter(c => c.status === 'active').length;
     const resolvedCases = casesData.filter(c => c.status === 'resolved').length;
     const criticalCases = casesData.filter(c => c.severity === 'critical' && c.status === 'active').length;
-    
+
     document.getElementById('activeCases').textContent = activeCases;
     document.getElementById('resolvedCases').textContent = resolvedCases;
     document.getElementById('criticalCases').textContent = criticalCases;
@@ -585,8 +608,8 @@ function updateStats() {
 
 function updateLastUpdated() {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
+    const timeString = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
         minute: '2-digit'
     });
     document.getElementById('lastUpdated').textContent = timeString;
@@ -599,7 +622,7 @@ function updateLastUpdated() {
 function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
-        item.addEventListener('click', function(e) {
+        item.addEventListener('click', function (e) {
             // Don't prevent default for report case button (handled by modal)
             if (this.id !== 'reportCaseBtn') {
                 e.preventDefault();

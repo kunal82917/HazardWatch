@@ -2,6 +2,8 @@
 // Dashboard JavaScript
 // ========================================
 
+const API_BASE = "http://localhost:5000/api"; // Change to your backend URL in production
+
 document.addEventListener('DOMContentLoaded', function () {
     // Check authentication
     checkAuth();
@@ -104,8 +106,7 @@ let map;
 let markers = [];
 
 function initializeMap() {
-
-    // Create map first (temporary center)
+    // Create map (default center: Mumbai)
     map = L.map('map').setView([19.0760, 72.8777], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -120,15 +121,12 @@ function initializeMap() {
                 const userLat = position.coords.latitude;
                 const userLng = position.coords.longitude;
 
-                // Move map to user location
                 map.setView([userLat, userLng], 13);
 
-                // Add marker for user
                 L.marker([userLat, userLng])
                     .addTo(map)
                     .bindPopup("You are here")
                     .openPopup();
-
             },
             function (error) {
                 console.log("Location access denied. Using default Mumbai.");
@@ -190,7 +188,6 @@ function initializeMap() {
         btn.addEventListener('click', function () {
             filterBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-
             const filter = this.getAttribute('data-filter');
             filterMarkers(filter);
         });
@@ -261,51 +258,15 @@ function filterMarkers(filter) {
 // News Updates
 // ========================================
 
-const newsData = [
-    {
-        badge: 'breaking',
-        title: 'Major earthquake detected in California region - Emergency response teams deployed',
-        time: '5 minutes ago'
-    },
-    {
-        badge: 'update',
-        title: 'Flood situation improving in coastal areas - Water levels receding',
-        time: '23 minutes ago'
-    },
-    {
-        badge: 'alert',
-        title: 'Storm warning issued for northeastern states - Residents advised to take precautions',
-        time: '1 hour ago'
-    },
-    {
-        badge: 'breaking',
-        title: 'Wildfire contained in forest area - No casualties reported',
-        time: '2 hours ago'
-    },
-    {
-        badge: 'update',
-        title: 'Emergency shelter capacity increased in affected zones',
-        time: '3 hours ago'
-    },
-    {
-        badge: 'alert',
-        title: 'Weather advisory: Heavy rainfall expected in midwest region',
-        time: '4 hours ago'
-    }
-];
-
 async function loadNews() {
     const newsList = document.getElementById('newsList');
     newsList.innerHTML = '';
 
-    const API_URL = "https://gnews.io/api/v4/search?q=disaster OR flood OR cyclone OR earthquake&lang=en&country=in&max=6&token=fdfb9e5b394271a3b276d5b9c8d0f00e";
-
     try {
-        const response = await fetch("/api/news")
+        const response = await fetch("/api/news");
         const data = await response.json();
 
         data.articles.forEach((article, index) => {
-
             const badge = getBadgeType(article.title);
 
             const newsItem = document.createElement('div');
@@ -334,30 +295,24 @@ async function loadNews() {
 
 function getBadgeType(title) {
     const text = title.toLowerCase();
-
     if (text.includes("earthquake") || text.includes("cyclone") || text.includes("tsunami")) {
         return "breaking";
     }
-
     if (text.includes("warning") || text.includes("alert")) {
         return "alert";
     }
-
     return "update";
 }
 
 function formatTime(dateString) {
     const published = new Date(dateString);
     const now = new Date();
-
     const diff = Math.floor((now - published) / 1000);
-
     const minutes = Math.floor(diff / 60);
     const hours = Math.floor(diff / 3600);
 
     if (minutes < 60) return `${minutes} minutes ago`;
     if (hours < 24) return `${hours} hours ago`;
-
     return published.toLocaleDateString();
 }
 
@@ -373,102 +328,76 @@ document.getElementById('refreshNews').addEventListener('click', function () {
 document.addEventListener("DOMContentLoaded", loadNews);
 
 // ========================================
-// Cases Table
+// Cases Table — MongoDB Integration
 // ========================================
 
-const casesData = [
-    {
-        id: 'DS-2024-001',
-        type: 'Fire',
-        location: 'Manhattan, NY',
-        severity: 'critical',
-        status: 'active',
-        reported: '10 min ago'
-    },
-    {
-        id: 'DS-2024-002',
-        type: 'Flood',
-        location: 'Central Park, NY',
-        severity: 'medium',
-        status: 'active',
-        reported: '25 min ago'
-    },
-    {
-        id: 'DS-2024-003',
-        type: 'Accident',
-        location: 'Queens, NY',
-        severity: 'low',
-        status: 'resolved',
-        reported: '1 hour ago'
-    },
-    {
-        id: 'DS-2024-004',
-        type: 'Storm',
-        location: 'Brooklyn, NY',
-        severity: 'critical',
-        status: 'active',
-        reported: '1.5 hours ago'
-    },
-    {
-        id: 'DS-2024-005',
-        type: 'Landslide',
-        location: 'Manhattan, NY',
-        severity: 'medium',
-        status: 'active',
-        reported: '2 hours ago'
-    },
-    {
-        id: 'DS-2024-006',
-        type: 'Earthquake',
-        location: 'Bronx, NY',
-        severity: 'critical',
-        status: 'resolved',
-        reported: '3 hours ago'
-    },
-    {
-        id: 'DS-2024-007',
-        type: 'Fire',
-        location: 'Staten Island, NY',
-        severity: 'low',
-        status: 'resolved',
-        reported: '4 hours ago'
-    },
-    {
-        id: 'DS-2024-008',
-        type: 'Flood',
-        location: 'Queens, NY',
-        severity: 'medium',
-        status: 'resolved',
-        reported: '5 hours ago'
-    }
-];
+let casesData = [];
 
-function loadCases() {
+async function loadCases() {
+    try {
+        const response = await fetch(`${API_BASE}/incidents`);
+        if (response.ok) {
+            casesData = await response.json();
+            // Normalize MongoDB _id to id for compatibility
+            casesData = casesData.map(c => ({
+                ...c,
+                id: c.id || c._id,
+                reported: c.reported || new Date(c.createdAt).toLocaleString()
+            }));
+        } else {
+            throw new Error('API not available');
+        }
+    } catch (error) {
+        console.warn('MongoDB API not reachable, using fallback data:', error.message);
+        casesData = getFallbackCasesData();
+    }
+
     renderCases(casesData);
+    updateStats();
 
     // Search functionality
-    document.getElementById('searchCases').addEventListener('input', function (e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const filtered = casesData.filter(c =>
-            c.id.toLowerCase().includes(searchTerm) ||
-            c.type.toLowerCase().includes(searchTerm) ||
-            c.location.toLowerCase().includes(searchTerm)
-        );
-        renderCases(filtered);
-    });
+    const searchInput = document.getElementById('searchCases');
+    if (searchInput) {
+        searchInput.addEventListener('input', function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = casesData.filter(c =>
+                (c.id || '').toLowerCase().includes(searchTerm) ||
+                (c.type || '').toLowerCase().includes(searchTerm) ||
+                (c.location || '').toLowerCase().includes(searchTerm)
+            );
+            renderCases(filtered);
+        });
+    }
 
     // Filter functionality
-    document.getElementById('filterStatus').addEventListener('change', function (e) {
-        const filterValue = e.target.value;
-        const filtered = filterValue === 'all'
-            ? casesData
-            : casesData.filter(c => c.severity === filterValue || c.status === filterValue);
-        renderCases(filtered);
-    });
+    const filterSelect = document.getElementById('filterStatus');
+    if (filterSelect) {
+        filterSelect.addEventListener('change', function (e) {
+            const filterValue = e.target.value;
+            const filtered = filterValue === 'all'
+                ? casesData
+                : casesData.filter(c => c.severity === filterValue || c.status === filterValue);
+            renderCases(filtered);
+        });
+    }
+}
+
+function getFallbackCasesData() {
+    return [
+        { id: 'DS-2024-001', type: 'Fire', location: 'Manhattan, NY', severity: 'critical', status: 'active', reported: '10 min ago' },
+        { id: 'DS-2024-002', type: 'Flood', location: 'Central Park, NY', severity: 'medium', status: 'active', reported: '25 min ago' },
+        { id: 'DS-2024-003', type: 'Accident', location: 'Queens, NY', severity: 'low', status: 'resolved', reported: '1 hour ago' },
+        { id: 'DS-2024-004', type: 'Storm', location: 'Brooklyn, NY', severity: 'critical', status: 'active', reported: '1.5 hours ago' },
+        { id: 'DS-2024-005', type: 'Landslide', location: 'Manhattan, NY', severity: 'medium', status: 'active', reported: '2 hours ago' },
+        { id: 'DS-2024-006', type: 'Earthquake', location: 'Bronx, NY', severity: 'critical', status: 'resolved', reported: '3 hours ago' },
+        { id: 'DS-2024-007', type: 'Fire', location: 'Staten Island, NY', severity: 'low', status: 'resolved', reported: '4 hours ago' },
+        { id: 'DS-2024-008', type: 'Flood', location: 'Queens, NY', severity: 'medium', status: 'resolved', reported: '5 hours ago' }
+    ];
 }
 
 function renderCases(cases) {
     const tbody = document.getElementById('casesTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     cases.forEach(caseItem => {
@@ -483,43 +412,25 @@ function renderCases(cases) {
                 </span>
             </td>
             <td>
-                <span class="status-badge-table ${caseItem.status === 'resolved' ? 'status-resolved' : 'status-active-table'}">
+                <span class="status-badge-table ${caseItem.status === 'resolved' ? 'status-resolved-table' : 'status-active-table'}">
                     ${caseItem.status}
                 </span>
             </td>
             <td>${caseItem.reported}</td>
             <td>
-                <div class="case-actions">
-                    <button class="btn-action" onclick="viewCase('${caseItem.id}')" title="View details">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
-                    <button class="btn-action" onclick="editCase('${caseItem.id}')" title="Edit case">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                    </button>
-                    <button class="btn-action" onclick="deleteCase('${caseItem.id}')" title="Delete case">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                        </svg>
-                    </button>
-                </div>
+                <button class="btn-view" onclick="viewCase('${caseItem.id}')">View</button>
+                <button class="btn-edit" onclick="editCase('${caseItem.id}')">Edit</button>
+                <button class="btn-delete" onclick="deleteCase('${caseItem.id}')">Delete</button>
             </td>
         `;
         tbody.appendChild(row);
     });
 }
 
-// Case actions
 function viewCase(id) {
-    const caseItem = casesData.find(c => c.id === id);
+    const caseItem = casesData.find(c => c.id === id || c._id === id);
     if (caseItem) {
-        alert(`Case Details:\n\nID: ${caseItem.id}\nType: ${caseItem.type}\nLocation: ${caseItem.location}\nSeverity: ${caseItem.severity}\nStatus: ${caseItem.status}\nReported: ${caseItem.reported}`);
+        alert(`Case Details:\nID: ${caseItem.id}\nType: ${caseItem.type}\nLocation: ${caseItem.location}\nSeverity: ${caseItem.severity}\nStatus: ${caseItem.status}\nReported: ${caseItem.reported}`);
     }
 }
 
@@ -527,13 +438,21 @@ function editCase(id) {
     alert(`Edit functionality for case ${id} would be implemented here`);
 }
 
-function deleteCase(id) {
+async function deleteCase(id) {
     if (confirm(`Are you sure you want to delete case ${id}?`)) {
-        const index = casesData.findIndex(c => c.id === id);
-        if (index > -1) {
-            casesData.splice(index, 1);
-            loadCases();
+        try {
+            const response = await fetch(`${API_BASE}/incidents/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                casesData = casesData.filter(c => c.id !== id && c._id !== id);
+            } else {
+                throw new Error('Delete failed');
+            }
+        } catch (error) {
+            console.warn('Could not delete from MongoDB, removing locally:', error.message);
+            casesData = casesData.filter(c => c.id !== id && c._id !== id);
         }
+        renderCases(casesData);
+        updateStats();
     }
 }
 
@@ -571,7 +490,7 @@ function initializeModals() {
         }
     });
 
-    reportForm.addEventListener('submit', function (e) {
+    reportForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const formData = {
@@ -580,34 +499,48 @@ function initializeModals() {
             location: document.getElementById('caseLocation').value,
             description: document.getElementById('caseDescription').value,
             contact: document.getElementById('caseContact').value,
-            people: document.getElementById('casePeople').value
-        };
-
-        // Generate new case ID
-        const newId = `DS-2024-${String(casesData.length + 1).padStart(3, '0')}`;
-
-        // Add new case
-        const newCase = {
-            id: newId,
-            type: formData.type.charAt(0).toUpperCase() + formData.type.slice(1),
-            location: formData.location,
-            severity: formData.severity,
+            people: document.getElementById('casePeople').value,
             status: 'active',
-            reported: 'Just now'
+            reportedBy: sessionStorage.getItem('username') || 'Unknown'
         };
+
+        let newCase;
+
+        try {
+            // Try to save to MongoDB
+            const response = await fetch(`${API_BASE}/incidents`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                newCase = await response.json();
+                newCase.id = newCase._id || newCase.id;
+                newCase.reported = 'Just now';
+            } else {
+                throw new Error('API save failed');
+            }
+        } catch (error) {
+            console.warn('MongoDB not reachable, saving locally:', error.message);
+            // Fallback: generate ID locally
+            const newId = `DS-2024-${String(casesData.length + 1).padStart(3, '0')}`;
+            newCase = {
+                id: newId,
+                type: formData.type.charAt(0).toUpperCase() + formData.type.slice(1),
+                location: formData.location,
+                severity: formData.severity,
+                status: 'active',
+                reported: 'Just now'
+            };
+        }
 
         casesData.unshift(newCase);
-
-        // Update stats
         updateStats();
-
-        // Reload cases table
         renderCases(casesData);
 
-        // Show success message
-        alert(`Case ${newId} has been successfully reported!\n\nType: ${newCase.type}\nLocation: ${newCase.location}\nSeverity: ${newCase.severity}`);
+        alert(`Case ${newCase.id} has been successfully reported!\n\nType: ${newCase.type}\nLocation: ${newCase.location}\nSeverity: ${newCase.severity}`);
 
-        // Close modal and reset form
         reportModal.classList.remove('active');
         reportForm.reset();
     });
@@ -642,9 +575,13 @@ function updateStats() {
     const resolvedCases = casesData.filter(c => c.status === 'resolved').length;
     const criticalCases = casesData.filter(c => c.severity === 'critical' && c.status === 'active').length;
 
-    document.getElementById('activeCases').textContent = activeCases;
-    document.getElementById('resolvedCases').textContent = resolvedCases;
-    document.getElementById('criticalCases').textContent = criticalCases;
+    const activeEl = document.getElementById('activeCases');
+    const resolvedEl = document.getElementById('resolvedCases');
+    const criticalEl = document.getElementById('criticalCases');
+
+    if (activeEl) activeEl.textContent = activeCases;
+    if (resolvedEl) resolvedEl.textContent = resolvedCases;
+    if (criticalEl) criticalEl.textContent = criticalCases;
 }
 
 // ========================================
@@ -657,7 +594,8 @@ function updateLastUpdated() {
         hour: '2-digit',
         minute: '2-digit'
     });
-    document.getElementById('lastUpdated').textContent = timeString;
+    const el = document.getElementById('lastUpdated');
+    if (el) el.textContent = timeString;
 }
 
 // ========================================
@@ -668,17 +606,13 @@ function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
         item.addEventListener('click', function (e) {
-            // Don't prevent default for report case button (handled by modal)
             if (this.id !== 'reportCaseBtn') {
                 e.preventDefault();
                 navItems.forEach(nav => nav.classList.remove('active'));
                 this.classList.add('active');
 
-                // Get the menu item text for future use
                 const menuText = this.textContent.trim();
                 console.log('Navigating to:', menuText);
-
-                // Handle navigation
                 showSection(menuText);
             }
         });
@@ -695,47 +629,44 @@ function showSection(sectionName) {
     const settingsSection = document.getElementById('settingsSection');
 
     // Hide all sections
-    casesSection.style.display = 'none';
-    communitySection.style.display = 'none';
-    emergencyResourcesSection.style.display = 'none';
-    alertsSection.style.display = 'none';
-    settingsSection.style.display = 'none';
+    if (casesSection) casesSection.style.display = 'none';
+    if (communitySection) communitySection.style.display = 'none';
+    if (emergencyResourcesSection) emergencyResourcesSection.style.display = 'none';
+    if (alertsSection) alertsSection.style.display = 'none';
+    if (settingsSection) settingsSection.style.display = 'none';
 
     if (sectionName === 'Community') {
         statsCards.style.display = 'none';
         contentGrid.style.display = 'none';
-        communitySection.style.display = 'block';
+        if (communitySection) communitySection.style.display = 'block';
         initializeCommunity();
     } else if (sectionName === 'Emergency Resources') {
         statsCards.style.display = 'none';
         contentGrid.style.display = 'none';
-        emergencyResourcesSection.style.display = 'block';
+        if (emergencyResourcesSection) emergencyResourcesSection.style.display = 'block';
         initializeEmergencyResources();
     } else if (sectionName === 'Alerts') {
         statsCards.style.display = 'none';
         contentGrid.style.display = 'none';
-        alertsSection.style.display = 'block';
+        if (alertsSection) alertsSection.style.display = 'block';
         initializeAlerts();
     } else if (sectionName === 'Settings') {
         statsCards.style.display = 'none';
         contentGrid.style.display = 'none';
-        settingsSection.style.display = 'block';
+        if (settingsSection) settingsSection.style.display = 'block';
         initializeSettings();
     } else {
+        // Dashboard (default)
         statsCards.style.display = 'grid';
         contentGrid.style.display = 'grid';
-        casesSection.style.display = 'block';
+        if (casesSection) casesSection.style.display = 'block';
     }
 }
 
-// Community Features section moved to community.js
-// Emergency Resources section moved to emergency-resources.js
-
 // ========================================
-// Utility Functions
+// Pulse Animation for Map Markers
 // ========================================
 
-// Add CSS for marker pulse animation
 const style = document.createElement('style');
 style.textContent = `
     @keyframes pulse {
@@ -750,3 +681,69 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+document.getElementById('fetchLocationBtn').addEventListener('click', function () {
+    const btn = this;
+    const input = document.getElementById('caseLocation');
+
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+    }
+
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            style="animation: spin 1s linear infinite;">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Fetching...
+    `;
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+
+            try {
+                // Reverse geocode using OpenStreetMap's free Nominatim API
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+                );
+                const data = await response.json();
+                input.value = data.display_name || `${latitude}, ${longitude}`;
+            } catch (error) {
+                // Fallback to raw coordinates if reverse geocoding fails
+                input.value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+            }
+
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                </svg>
+                Fetch Location
+            `;
+        },
+        (error) => {
+            const messages = {
+                1: 'Location access denied. Please allow location permission.',
+                2: 'Location unavailable. Try again.',
+                3: 'Location request timed out.'
+            };
+            alert(messages[error.code] || 'Unable to fetch location.');
+
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                </svg>
+                Fetch Location
+            `;
+        },
+        { timeout: 10000 }
+    );
+});

@@ -104,7 +104,7 @@ let map;
 let markers = [];
 let incidentsData = [];
 let casesInitialized = false;
-const API_BASE = '';
+const API_BASE = 'http://localhost:5000';
 
 function initializeMap() {
 

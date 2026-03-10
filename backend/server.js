@@ -14,11 +14,17 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Example: Incidents schema
 const incidentSchema = new mongoose.Schema({
-    type: String,
+    caseId: { type: String, required: true, unique: true },
+    type: { type: String, required: true },
+    description: String,
     location: String,
-    severity: String,
+    severity: { type: String, default: 'low' },
     status: { type: String, default: 'active' },
     reportedBy: String,
+    contact: String,
+    people: String,
+    lat: { type: Number, default: 0 },
+    lng: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -31,9 +37,22 @@ app.get('/api/incidents', async (req, res) => {
 });
 
 app.post('/api/incidents', async (req, res) => {
-    const incident = new Incident(req.body);
+    const incidentData = { ...req.body };
+
+    // Ensure a caseId exists (frontend may provide one)
+    if (!incidentData.caseId) {
+        incidentData.caseId = `DS-${Date.now()}`;
+    }
+
+    const incident = new Incident(incidentData);
     await incident.save();
     res.status(201).json(incident);
+});
+
+app.delete('/api/incidents/:id', async (req, res) => {
+    const { id } = req.params;
+    await Incident.findByIdAndDelete(id);
+    res.json({ success: true });
 });
 
 app.listen(process.env.PORT, () => {

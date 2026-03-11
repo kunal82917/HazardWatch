@@ -1,0 +1,75 @@
+const crypto = require('crypto');
+const mongoose = require('mongoose');
+
+const { MONGO_URI } = process.env;
+
+if (!MONGO_URI) {
+    throw new Error('Missing required environment variable: MONGO_URI');
+}
+
+// Mongoose connection caching (important for serverless environments)
+const globalAny = global;
+
+if (!globalAny._hazardwatch_mongoose) {
+    globalAny._hazardwatch_mongoose = {
+        conn: null,
+        promise: null
+    };
+}
+
+const cached = globalAny._hazardwatch_mongoose;
+
+async function connect() {
+    if (cached.conn) {
+        return cached.conn;
+    }
+
+    if (!cached.promise) {
+        cached.promise = mongoose.connect(MONGO_URI).then((mongoose) => mongoose);
+    }
+
+    cached.conn = await cached.promise;
+    return cached.conn;
+}
+
+const userSchema = new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true },
+    salt: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const incidentSchema = new mongoose.Schema({
+    caseId: { type: String, required: true, unique: true },
+    type: { type: String, required: true },
+    description: String,
+    location: String,
+    severity: { type: String, default: 'low' },
+    status: { type: String, default: 'active' },
+    reportedBy: String,
+    contact: String,
+    people: String,
+    lat: { type: Number, default: 0 },
+    lng: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+const Incident = mongoose.models.Incident || mongoose.model('Incident', incidentSchema);
+
+function hashPassword(password, salt = null) {
+    if (!salt) {
+        salt = crypto.randomBytes(16).toString('hex');
+    }
+    const hash = crypto
+        .pbkdf2Sync(password, salt, 310000, 32, 'sha256')
+        .toString('hex');
+    return { salt, hash };
+}
+
+module.exports = {
+    connect,
+    User,
+    Incident,
+    hashPassword
+};

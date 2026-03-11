@@ -57,10 +57,10 @@ const incidentSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-const Incident = mongoose.models.Incident || mongoose.model('Incident', incidentSchema);
+export const User = mongoose.models.User || mongoose.model('User', userSchema);
+export const Incident = mongoose.models.Incident || mongoose.model('Incident', incidentSchema);
 
-function hashPassword(password, salt = null) {
+export function hashPassword(password, salt = null) {
     if (!salt) {
         salt = crypto.randomBytes(16).toString('hex');
     }
@@ -69,10 +69,3 @@ function hashPassword(password, salt = null) {
         .toString('hex');
     return { salt, hash };
 }
-
-module.exports = {
-    connect,
-    User,
-    Incident,
-    hashPassword
-};

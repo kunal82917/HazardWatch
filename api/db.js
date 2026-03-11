@@ -3,9 +3,8 @@ import mongoose from 'mongoose';
 
 const { MONGO_URI } = process.env;
 
-if (!MONGO_URI) {
-    throw new Error('Missing required environment variable: MONGO_URI');
-}
+// Leave configuration validation until runtime so the function can return a proper error
+// instead of crashing during module initialization.
 
 // Mongoose connection caching (important for serverless environments)
 const globalAny = global;
@@ -20,6 +19,10 @@ if (!globalAny._hazardwatch_mongoose) {
 const cached = globalAny._hazardwatch_mongoose;
 
 export async function connect() {
+    if (!MONGO_URI) {
+        throw new Error('Missing required environment variable: MONGO_URI');
+    }
+
     if (cached.conn) {
         return cached.conn;
     }

@@ -1,4 +1,11 @@
-﻿const API_BASE = 'http://localhost:5000';
+﻿// When deployed, you can set window.API_BASE in HTML to point to a remote backend.
+// When running locally via `file://` (opening index.html from disk), default to localhost:5000
+// so a local node backend still works.
+const API_BASE =
+    window.API_BASE ||
+    (window.location.protocol === 'file:'
+        ? 'http://localhost:5000'
+        : window.location.origin);
 
 let mode = 'signin'; // 'signin' or 'signup'
 
@@ -45,11 +52,20 @@ function setSession(email, remember) {
 }
 
 async function authRequest(endpoint, body) {
-    const response = await fetch(`${API_BASE}/api/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
+    let response;
+    try {
+        response = await fetch(`${API_BASE}/api/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+    } catch (err) {
+        // Provide a clearer error message when the network request fails
+        throw new Error(
+            `Unable to reach the authentication server at ${API_BASE}. ` +
+                'Make sure the backend is running and accessible (e.g., run `node backend/server.js`).'
+        );
+    }
 
     const data = await response.json();
     if (!response.ok) {

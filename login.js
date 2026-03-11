@@ -67,10 +67,22 @@ async function authRequest(endpoint, body) {
         );
     }
 
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+    let data;
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+        data = await response.json();
+    } else {
+        // When response isn't JSON (e.g., HTML error page or empty body), fall back to text.
+        const text = await response.text();
+        const message = text ? text.trim().slice(0, 200) : response.statusText;
+        data = { error: message || 'Unexpected response from server' };
     }
+
+    if (!response.ok) {
+        throw new Error(data.error || `Authentication failed (${response.status})`);
+    }
+
     return data;
 }
 

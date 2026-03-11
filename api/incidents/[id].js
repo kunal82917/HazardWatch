@@ -1,6 +1,6 @@
-const { connect, Incident } = require('../db');
+import { connect, Incident } from '../db.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     await connect();
 
     const { id } = req.query || {};
@@ -23,4 +23,4 @@ module.exports = async function handler(req, res) {
 
     res.setHeader('Allow', 'GET, DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
-};
+}

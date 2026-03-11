@@ -1,5 +1,5 @@
-const crypto = require('crypto');
-const mongoose = require('mongoose');
+import crypto from 'crypto';
+import mongoose from 'mongoose';
 
 const { MONGO_URI } = process.env;
 
@@ -19,7 +19,7 @@ if (!globalAny._hazardwatch_mongoose) {
 
 const cached = globalAny._hazardwatch_mongoose;
 
-async function connect() {
+export async function connect() {
     if (cached.conn) {
         return cached.conn;
     }
